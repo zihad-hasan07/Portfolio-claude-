@@ -1,0 +1,11 @@
+# Netlify configuration
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+# Inject Supabase env vars into the client at build time is NOT supported
+# for plain static HTML. Instead, the anon key is embedded directly in
+# index.html (safe with RLS). For the bootstrap-admin function, set these
+# as Netlify env vars in the dashboard (Site settings → Environment variables):
+#   SUPABASE_URL           = https://trzfidxecdbwynnzgdnm.supabase.co
+#   SUPABASE_SERVICE_ROLE  = <your service_role key, server-only>

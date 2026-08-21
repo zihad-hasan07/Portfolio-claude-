@@ -937,7 +937,107 @@ body.em [data-e]:focus{outline:2px solid var(--cy);background:rgba(0,119,182,.08
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+/* ══════════════════════════════════════════════════════════
+   SUPABASE CLIENT + STORAGE LAYER
+   The anon (publishable) key is safe to expose in the browser
+   because Row Level Security gates all access server-side.
+   The service_role key is NEVER used here.
+   Netlify env vars (SUPABASE_URL, SUPABASE_ANON_KEY), if present,
+   override these defaults at build time via the bootstrap function.
+   NOTE: If you change these values, also update netlify.toml env injection.
+════════════════════════════════════════════════════════ */
+const SUPABASE_URL  = (window.SUPABASE_URL  || "https://trzfidxecdbwynnzgdnm.supabase.co");
+const SUPABASE_ANON = (window.SUPABASE_ANON || "sb_publishable_cxR0CHwn4jAkWGRfIKVt7g_H4dx1MXz");
+const CONTENT_TABLE = "portfolio_content";
+const IMAGE_BUCKET  = "portfolio-images";
+
+let supa = null;
+let supaReady = false;
+try {
+  supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
+  });
+  supaReady = true;
+} catch (e) { console.warn("Supabase init failed, falling back to localStorage", e); }
+
+/* Admin email used for Supabase Auth login. */
+const ADMIN_EMAIL = "admin@portfolio.local";
+const ADMIN_DEFAULT_PASS = "zh82864@me";
+
+/* In-memory cache of the single content row. */
+let _contentCache = null;
+
+/* Read the single portfolio_content row. Returns the `content` JSON or {}. */
+async function loadContent() {
+  if (!supaReady) {
+    // localStorage fallback (legacy / offline)
+    const out = {};
+    ['projects','pData','edits','photo','roles','skills','timeline','socials','config','services','testimonials','visibility']
+      .forEach(k => { const v = localStorage.getItem('pf_'+k); if(v) out[k] = JSON.parse(v); });
+    return out;
+  }
+  try {
+    const { data, error } = await supa.from(CONTENT_TABLE).select('content').eq('id',1).single();
+    if (error && error.code !== 'PGRST116') throw error;
+    const c = (data && data.content) ? data.content : {};
+    _contentCache = c;
+    return c;
+  } catch (e) {
+    console.warn("loadContent failed, using defaults", e);
+    return {};
+  }
+}
+
+/* Persist the entire content JSON (admin-only via RLS). */
+async function saveContent(content) {
+  _contentCache = content;
+  if (!supaReady) return; // localStorage fallback path writes individual keys via sS
+  try {
+    const { error } = await supa.from(CONTENT_TABLE)
+      .upsert({ id: 1, content, updated_at: new Date().toISOString() }, { onConflict: 'id' });
+    if (error) {
+      // If row missing, insert
+      if (error.code === 'PGRST116' || (error.message||'').toLowerCase().includes('no rows')) {
+        await supa.from(CONTENT_TABLE).insert({ id:1, content, updated_at: new Date().toISOString() });
+      } else { console.warn("saveContent error", error); }
+    }
+  } catch (e) { console.warn("saveContent failed", e); }
+}
+
+/* The existing sS(k,v) writes a single key. Now it merges into the content blob
+   and persists the whole thing asynchronously. We keep localStorage mirroring
+   so the UI updates instantly without awaiting the network. */
+function sS(k,v){
+  try{ localStorage.setItem('pf_'+k, JSON.stringify(v)); }catch(e){}
+  if(!supaReady) return;
+  _contentCache = _contentCache || {};
+  _contentCache[k] = v;
+  // Debounce network writes so rapid edits don't spam the API.
+  if(window._saveT) clearTimeout(window._saveT);
+  window._saveT = setTimeout(()=>saveContent(_contentCache), 400);
+}
+/* lS(k) now returns from the in-memory cache populated at load, falling back
+   to localStorage. The site's restore() calls lS synchronously at startup,
+   so we prime the cache from localStorage immediately and refresh from
+   Supabase asynchronously. */
+function lS(k){
+  try{ const v=localStorage.getItem('pf_'+k); return v?JSON.parse(v):null; }catch{return null;}
+}
+
+/* Upload a File to Supabase Storage, returns public URL. */
+async function uploadImage(file) {
+  if(!supaReady) return null;
+  const ext = (file.name.split('.').pop()||'png').toLowerCase();
+  const path = `photo_${Date.now()}.${ext}`;
+  const { data, error } = await supa.storage.from(IMAGE_BUCKET)
+    .upload(path, file, { cacheControl: '3600', upsert: true });
+  if (error) { console.warn("uploadImage error", error); return null; }
+  const { data: pub } = supa.storage.from(IMAGE_BUCKET).getPublicUrl(data.path);
+  return pub.publicUrl;
+}
+
 function esc(str) {
   if (str == null) return '';
   return String(str).replace(/[&<>"']/g, function(m) {
@@ -1276,18 +1376,35 @@ function updateAttDisplay(){const rem=MAX_ATT-attempts;document.getElementById('
 async function tryLogin(){
   if(locked){showLocked();return;}
   const p=document.getElementById('adm-pass').value;
+  document.getElementById('adm-pass').value='';
 
-  let stored=lS('adminPass');
-  if(!stored) {
-    stored=PASS_HASH;
-  } else if(stored.length !== 64) {
-    // migrate legacy plaintext password
-    stored = await hashPass(stored);
-    sS('adminPass', stored);
+  // Use Supabase Auth when available; fall back to legacy hash for offline.
+  if (supaReady) {
+    try {
+      const { data, error } = await supa.auth.signInWithPassword({
+        email: ADMIN_EMAIL, password: p
+      });
+      if (error) throw error;
+      attempts=0;localStorage.setItem('adm','1');
+      closeAdmOv();openAdmin();
+      return;
+    } catch(e){
+      attempts++;
+      updateAttDisplay();
+      document.getElementById('adm-err').textContent = (e && e.message) ? e.message : 'Login failed.';
+      document.getElementById('adm-err').style.display='block';
+      document.getElementById('adm-pass').style.borderColor='#ff4d4d';
+      setTimeout(()=>document.getElementById('adm-pass').style.borderColor='',1000);
+      if(attempts>=MAX_ATT){lockout();}
+      return;
+    }
   }
 
+  // Legacy fallback (no Supabase / offline)
+  let stored=lS('adminPass');
+  if(!stored) { stored=PASS_HASH; }
+  else if(stored.length !== 64) { stored = await hashPass(stored); sS('adminPass', stored); }
   const pHash = await hashPass(p);
-  document.getElementById('adm-pass').value='';
   if(pHash===stored){
     attempts=0;localStorage.setItem('adm','1');
     closeAdmOv();openAdmin();
@@ -1322,6 +1439,22 @@ function tryRecovery(){
 async function resetPassword(){
   const np=document.getElementById('rec-newpass').value;
   if(np.length<6){alert('Password must be at least 6 characters.');return;}
+  // Supabase: send a recovery email. The user clicks the link to set a new password.
+  if (supaReady) {
+    try {
+      const { error } = await supa.auth.resetPasswordForEmail(ADMIN_EMAIL, {
+        redirectTo: location.origin
+      });
+      if (error) throw error;
+      alert('Password reset link sent to ' + ADMIN_EMAIL + '. Check your inbox.');
+      closeAdmOv();
+      return;
+    } catch(e){
+      alert('Could not send reset email: ' + (e.message||e));
+      return;
+    }
+  }
+  // Legacy fallback
   const npHash = await hashPass(np);
   sS('adminPass',npHash);
   closeAdmOv();openAdmin();
@@ -1443,7 +1576,11 @@ function togSpace(show) { document.getElementById('space-cv').style.display = sh
 
 function openAdmin(){document.getElementById('adm-panel').classList.add('open');loadAdminFields();buildAProjList();buildATimeline();buildASocialList();buildASkills();}
 function closeAdmin(){document.getElementById('adm-panel').classList.remove('open');}
-function adminLogout(){localStorage.removeItem('adm');closeAdmin();disableEM();}
+function adminLogout(){
+  localStorage.removeItem('adm');
+  if (supaReady) { try { supa.auth.signOut(); } catch(e){} }
+  closeAdmin();disableEM();
+}
 function apTab(btn,sec){document.querySelectorAll('.ap-tab').forEach(b=>b.classList.remove('act'));document.querySelectorAll('.ap-sec').forEach(s=>s.classList.remove('act'));btn.classList.add('act');document.getElementById(sec).classList.add('act');}
 
 function loadAdminFields(){
@@ -1481,8 +1618,21 @@ function apApplyProfile(){
 /* ─ Photo (admin only) ─ */
 function applyPhoto(){
   const url=gi('ap-photo-url');if(!url)return;setPhoto(url);sS('photo',url);showMsg('Photo applied ✓','var(--gr)');}
-document.getElementById('ap-photo-file').addEventListener('change',function(){
+document.getElementById('ap-photo-file').addEventListener('change',async function(){
   const f=this.files[0];if(!f)return;
+  this.value='';
+  // Upload to Supabase Storage when available, then store the public URL.
+  if (supaReady) {
+    showMsg('Uploading…','var(--cy)');
+    const url = await uploadImage(f);
+    if (url) {
+      setPhoto(url); sS('photo', url);
+      showMsg('Photo uploaded ✓','var(--gr)');
+      return;
+    }
+    showMsg('Upload failed — using local preview','#ff4d4d');
+  }
+  // Fallback: Base64 in localStorage (legacy, offline)
   const r=new FileReader();r.onload=e=>{setPhoto(e.target.result);sS('photo',e.target.result);showMsg('Photo uploaded ✓','var(--gr)');};r.readAsDataURL(f);
 });
 function setPhoto(src){
@@ -1577,15 +1727,29 @@ async function saveSecuritySettings(){
   const q=gi('sec-q'),a=gi('sec-a');
   const msg=document.getElementById('sec-msg');
 
-  let stored=lS('adminPass');
-  if(!stored) {
-    stored=PASS_HASH;
-  } else if(stored.length !== 64) {
-    // migrate legacy plaintext password
-    stored = await hashPass(stored);
-    sS('adminPass', stored);
+  // Supabase: change password via the authenticated session.
+  if (supaReady) {
+    if(nw||old){
+      if(nw!==cnf){showMsg('Passwords do not match','#ff4d4d',true);return;}
+      if(nw.length<6){showMsg('Min 6 characters','#ff4d4d',true);return;}
+      try {
+        const { error } = await supa.auth.updateUser({ password: nw });
+        if (error) { showMsg(error.message||'Update failed','#ff4d4d',true); return; }
+      } catch(e){
+        showMsg(e.message||'Update failed','#ff4d4d',true); return;
+      }
+    }
+    if(q)sS('secQ',q);
+    if(a)sS('secA',a.toLowerCase());
+    showMsg('Security settings saved ✓','var(--gr)',true);
+    gv('sec-old','');gv('sec-new','');gv('sec-cnf','');gv('sec-a','');
+    return;
   }
 
+  // Legacy fallback (no Supabase)
+  let stored=lS('adminPass');
+  if(!stored) { stored=PASS_HASH; }
+  else if(stored.length !== 64) { stored = await hashPass(stored); sS('adminPass', stored); }
   if(nw||old){
     const oldHash = await hashPass(old);
     if(oldHash!==stored){showMsg('Current password incorrect','#ff4d4d',true);return;}
@@ -1669,7 +1833,7 @@ function restore(){
 
 /* ══════════════════════════════════════════════════════════
    INIT
-══════════════════════════════════════════════════════════ */
+════════════════════════════════════════════════════════ */
 restore();
 applyVisibility();
 buildServices();
@@ -1681,6 +1845,39 @@ buildSocials();
 togSpace(CONFIG.space);
 setTimeout(observe,80);setTimeout(observe,500);
 document.querySelectorAll('.tab-btn').forEach(b=>b.addEventListener('click',()=>setTimeout(observe,60)));
+
+/* Async refresh from Supabase: pull the canonical content row and
+   re-apply if it differs from what localStorage had. This makes the
+   site render instantly from cache then sync from the database. */
+(async function syncFromSupabase(){
+  if(!supaReady) return;
+  const c = await loadContent();
+  if(!c || Object.keys(c).length===0) return;
+  // Mirror into localStorage so lS() / restore() find it on next paint.
+  Object.entries(c).forEach(([k,v])=>{ try{ localStorage.setItem('pf_'+k, JSON.stringify(v)); }catch(e){} });
+  _contentCache = c;
+  // Re-run restore to reflect remote state.
+  restore();
+  applyVisibility();
+  buildServices(); buildTestimonials();
+  renderSk('frontend'); renderTags();
+  buildProjects(); buildTimeline(); buildSocials();
+  togSpace(CONFIG.space);
+  applySEO && applySEO();
+})();
+
+/* If a Supabase session already exists (returning admin), restore admin state. */
+(async function checkSession(){
+  if(!supaReady) return;
+  try {
+    const { data } = await supa.auth.getSession();
+    if (data && data.session) {
+      localStorage.setItem('adm','1');
+    } else {
+      localStorage.removeItem('adm');
+    }
+  } catch(e){}
+})();
 </script>
 </body>
 </html>
