@@ -460,7 +460,7 @@ body.em [data-e]:focus{outline:2px solid var(--cy);background:rgba(0,119,182,.08
 <div id="adm-panel">
   <div class="ap-head">
     <h3>⚙ Admin <span class="ap-badge">LIVE</span></h3>
-    <button class="ap-close" onclick="closeAdmin()">✕</button>
+    <button class="ap-close" onclick="closeAdmin()" aria-label="Close admin panel">✕</button>
   </div>
   <div class="ap-tabs">
     <button class="ap-tab act" onclick="apTab(this,'ap-profile')">Profile</button>
@@ -866,16 +866,16 @@ body.em [data-e]:focus{outline:2px solid var(--cy);background:rgba(0,119,182,.08
         <div class="si-list" id="si-list-wrap"></div>
       </div>
       <div class="fw rv right">
-        <div id="f-inner">
+        <form id="f-inner" onsubmit="event.preventDefault(); handleForm();">
           <div class="f-row">
-            <div class="fg"><label class="fl">Name *</label><input class="fi" id="f-n" placeholder="Jane Smith"/></div>
-            <div class="fg"><label class="fl">Email *</label><input class="fi" id="f-em" type="email" placeholder="jane@example.com"/></div>
+            <div class="fg"><label for="f-n" class="fl">Name *</label><input class="fi" id="f-n" placeholder="Jane Smith" required/></div>
+            <div class="fg"><label for="f-em" class="fl">Email *</label><input class="fi" id="f-em" type="email" placeholder="jane@example.com" required/></div>
           </div>
-          <div class="fg"><label class="fl">Subject *</label><input class="fi" id="f-su" placeholder="Let's build something"/></div>
-          <div class="fg"><label class="fl">Message *</label><textarea class="ft" id="f-ms" placeholder="Tell me about your project..."></textarea></div>
-          <button class="btn-sub" id="f-btn" onclick="handleForm()">✈ Send Message</button>
+          <div class="fg"><label for="f-su" class="fl">Subject *</label><input class="fi" id="f-su" placeholder="Let's build something" required/></div>
+          <div class="fg"><label for="f-ms" class="fl">Message *</label><textarea class="ft" id="f-ms" placeholder="Tell me about your project..." required></textarea></div>
+          <button type="submit" class="btn-sub" id="f-btn">✈ Send Message</button>
           <p class="f-note">Usually reply within 24h · <span style="color:var(--cy)">No spam.</span></p>
-        </div>
+        </form>
         <div class="f-suc" id="f-suc">
           <div class="suc-i">✅</div>
           <h3 style="font-family:var(--fd);font-size:18px;font-weight:800;">Sent!</h3>
@@ -912,7 +912,7 @@ body.em [data-e]:focus{outline:2px solid var(--cy);background:rgba(0,119,182,.08
   <div class="modal">
     <div class="m-img"><img id="m-img" src="" alt=""/><div class="m-ov2"></div>
       <div class="m-hdr"><h2 id="m-ttl"></h2><p id="m-tl"></p></div>
-      <button class="m-x" onclick="closeModal()">✕</button>
+      <button class="m-x" onclick="closeModal()" aria-label="Close modal">✕</button>
     </div>
     <div class="m-body">
       <div class="m-stats" id="m-stats"></div>
