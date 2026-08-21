@@ -1047,11 +1047,14 @@ let VISIBILITY = { hero:true, about:true, skills:true, services:true, projects:t
    SCROLL / NAV
 ══════════════════════════════════════════════════════════ */
 function jTo(id){const el=document.getElementById(id);if(el)el.scrollIntoView({behavior:'smooth'});}
+const progEl = document.getElementById('prog');
+const navEl = document.getElementById('nav');
+const fabWEl = document.getElementById('fab-w');
 window.addEventListener('scroll',()=>{
   const sy=scrollY,sh=document.body.scrollHeight-innerHeight;
-  document.getElementById('prog').style.width=(sy/sh*100)+'%';
-  document.getElementById('nav').classList.toggle('sc',sy>50);
-  document.getElementById('fab-w').classList.toggle('vis',sy>400);
+  progEl.style.width=(sy/sh*100)+'%';
+  navEl.classList.toggle('sc',sy>50);
+  fabWEl.classList.toggle('vis',sy>400);
 },{passive:true});
 const sObs=new IntersectionObserver(entries=>{entries.forEach(e=>{if(!e.isIntersecting)return;const id=e.target.id;document.querySelectorAll('.n-links a').forEach(a=>a.classList.toggle('act',a.getAttribute('href')==='#'+id));document.querySelectorAll('.qni').forEach(q=>q.classList.toggle('act',q.dataset.t===id));});},{rootMargin:'-20% 0px -80% 0px'});
 ['hero','about','skills','services','projects','testimonials','contact'].forEach(id=>{const el=document.getElementById(id);if(el)sObs.observe(el);});
@@ -1640,5 +1643,4 @@ setTimeout(observe,80);setTimeout(observe,500);
 document.querySelectorAll('.tab-btn').forEach(b=>b.addEventListener('click',()=>setTimeout(observe,60)));
 </script>
 </body>
-</html>>
 </html>
