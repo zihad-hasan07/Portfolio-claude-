@@ -938,6 +938,20 @@ body.em [data-e]:focus{outline:2px solid var(--cy);background:rgba(0,119,182,.08
 </div>
 
 <script>
+function esc(str) {
+  if (str == null) return '';
+  return String(str).replace(/[&<>"']/g, function(m) {
+    switch (m) {
+      case '&': return '&amp;';
+      case '<': return '&lt;';
+      case '>': return '&gt;';
+      case '"': return '&quot;';
+      case "'": return '&#39;';
+      default: return m;
+    }
+  });
+}
+
 /* ══════════════════════════════════════════════════════════
    DEFAULT DATA — user fills everything via admin
 ══════════════════════════════════════════════════════════ */
@@ -1100,28 +1114,28 @@ function renderSk(tab){
   curSk=tab;
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('act',b.dataset.sk===tab));
   const g=document.getElementById('sk-grid');
-  g.innerHTML=SKILLS[tab].map(s=>`<div class="sk-card rv"><div class="sk-top"><div class="sk-name"><span>${s.icon}</span>${s.name}</div><span style="font-family:var(--fm);font-size:11px;font-weight:700;color:${s.c}">${s.level}%</span></div><div class="sk-track"><div class="sk-bar" data-lv="${s.level}" style="background:linear-gradient(90deg,${s.c}88,${s.c})"></div></div><div class="sk-desc">${s.desc}</div></div>`).join('');
+  g.innerHTML=SKILLS[tab].map(s=>`<div class="sk-card rv"><div class="sk-top"><div class="sk-name"><span>${esc(s.icon)}</span>${esc(s.name)}</div><span style="font-family:var(--fm);font-size:11px;font-weight:700;color:${esc(s.c)}">${esc(s.level)}%</span></div><div class="sk-track"><div class="sk-bar" data-lv="${esc(s.level)}" style="background:linear-gradient(90deg,${esc(s.c)}88,${esc(s.c)})"></div></div><div class="sk-desc">${esc(s.desc)}</div></div>`).join('');
   requestAnimationFrame(()=>{g.querySelectorAll('.sk-bar').forEach(b=>{setTimeout(()=>{b.style.width=b.dataset.lv+'%';},80);});g.querySelectorAll('.rv').forEach(el=>setTimeout(()=>el.classList.add('vis'),50));});
 }
 document.querySelectorAll('.tab-btn').forEach(b=>b.addEventListener('click',()=>renderSk(b.dataset.sk)));
-function renderTags(){document.getElementById('tag-cl').innerHTML=EXTRA_TAGS.map(t=>`<span class="tag">${t}</span>`).join('');}
+function renderTags(){document.getElementById('tag-cl').innerHTML=EXTRA_TAGS.map(t=>`<span class="tag">${esc(t)}</span>`).join('');}
 
 /* ══════════════════════════════════════════════════════════
    SERVICES & TESTIMONIALS
 ══════════════════════════════════════════════════════════ */
 function buildServices(){
   const w=document.getElementById('srv-grid');
-  if(w) w.innerHTML=SERVICES.map(s=>`<div class="srv-card rv"><span class="srv-ico">${s.icon}</span><h3 class="srv-title">${s.title}</h3><p class="srv-desc">${s.desc}</p></div>`).join('');
+  if(w) w.innerHTML=SERVICES.map(s=>`<div class="srv-card rv"><span class="srv-ico">${esc(s.icon)}</span><h3 class="srv-title">${esc(s.title)}</h3><p class="srv-desc">${esc(s.desc)}</p></div>`).join('');
 }
 function buildTestimonials(){
   const w=document.getElementById('tst-grid');
-  if(w) w.innerHTML=TESTIMONIALS.map(t=>`<div class="tst-card rv"><div class="tst-q">"</div><p class="tst-txt">${t.txt}</p><div class="tst-auth">${t.av?`<img src="${t.av}" class="tst-av"/>`:`<div class="tst-av-ph">${t.name.charAt(0).toUpperCase()}</div>`}<div><div class="tst-n">${t.name}</div><div class="tst-r">${t.role}</div></div></div></div>`).join('');
+  if(w) w.innerHTML=TESTIMONIALS.map(t=>`<div class="tst-card rv"><div class="tst-q">"</div><p class="tst-txt">${esc(t.txt)}</p><div class="tst-auth">${t.av?`<img src="${esc(t.av)}" class="tst-av"/>`:`<div class="tst-av-ph">${esc(t.name.charAt(0).toUpperCase())}</div>`}<div><div class="tst-n">${esc(t.name)}</div><div class="tst-r">${esc(t.role)}</div></div></div></div>`).join('');
 }
 
 /* ══════════════════════════════════════════════════════════
    PROJECTS
 ══════════════════════════════════════════════════════════ */
-function buildFBar(){const cats=['All',...new Set(PROJECTS.flatMap(p=>p.cat))];document.getElementById('fb-bar').innerHTML=cats.map(c=>`<button class="fb-btn${c==='All'?' act':''}" data-f="${c}" onclick="filterP('${c}')">${c}</button>`).join('');}
+function buildFBar(){const cats=['All',...new Set(PROJECTS.flatMap(p=>p.cat))];document.getElementById('fb-bar').innerHTML=cats.map(c=>`<button class="fb-btn${c==='All'?' act':''}" data-f="${esc(c)}" onclick="filterP(this.dataset.f)">${esc(c)}</button>`).join('');}
 function filterP(f){
   const q = document.getElementById('pj-search')?.value.toLowerCase() || '';
   document.querySelectorAll('.fb-btn').forEach(b=>b.classList.toggle('act',b.dataset.f===f));
@@ -1136,17 +1150,17 @@ function filterP(f){
 function buildProjects(){
   buildFBar();
   document.getElementById('pj-grid').innerHTML=PROJECTS.map(p=>`
-    <article class="pj-card rv" data-cats="${p.cat.join(',')}" data-id="${p.id}">
-      <div class="pj-img-w"><img src="${p.img}" alt="${p.title}" loading="lazy"/><div class="pj-ov"></div>${p.featured?'<div class="pj-ft">Featured</div>':''}</div>
+    <article class="pj-card rv" data-cats="${esc(p.cat.join(','))}" data-id="${esc(p.id)}">
+      <div class="pj-img-w"><img src="${esc(p.img)}" alt="${esc(p.title)}" loading="lazy"/><div class="pj-ov"></div>${p.featured?'<div class="pj-ft">Featured</div>':''}</div>
       <div class="pj-body">
-        <div class="pj-title">${p.title}</div><div class="pj-tl">${p.tagline}</div>
-        <div class="pj-desc">${p.desc}</div>
-        <div class="pj-tags">${p.tags.slice(0,4).map(t=>`<span class="pj-tag">${t}</span>`).join('')}</div>
-        <div class="pj-stats"><span>⭐ ${p.stars}</span><span>👥 ${p.users}</span></div>
+        <div class="pj-title">${esc(p.title)}</div><div class="pj-tl">${esc(p.tagline)}</div>
+        <div class="pj-desc">${esc(p.desc)}</div>
+        <div class="pj-tags">${p.tags.slice(0,4).map(t=>`<span class="pj-tag">${esc(t)}</span>`).join('')}</div>
+        <div class="pj-stats"><span>⭐ ${esc(p.stars)}</span><span>👥 ${esc(p.users)}</span></div>
         <div class="pj-acts">
-          <button class="btn-cs" onclick="openModal('${p.id}')">Case Study ↗</button>
-          <a href="${p.github}" target="_blank" class="btn-ico">⬡</a>
-          <a href="${p.live}" target="_blank" class="btn-ico">↗</a>
+          <button class="btn-cs" onclick="openModal(this.closest('.pj-card').dataset.id)">Case Study ↗</button>
+          <a href="${esc(p.github)}" target="_blank" class="btn-ico">⬡</a>
+          <a href="${esc(p.live)}" target="_blank" class="btn-ico">↗</a>
         </div>
       </div>
     </article>`).join('');
@@ -1155,10 +1169,10 @@ function buildProjects(){
 function openModal(id){
   const p=PROJECTS.find(x=>x.id===id);if(!p)return;
   document.getElementById('m-img').src=p.img;document.getElementById('m-ttl').textContent=p.title;document.getElementById('m-tl').textContent=p.tagline;
-  document.getElementById('m-stats').innerHTML=[['Stars',p.stars],['Users',p.users],['Uptime',p.uptime]].map(([k,v])=>`<div class="ms"><div class="ms-val">${v}</div><div class="ms-key">${k}</div></div>`).join('');
-  document.getElementById('m-secs').innerHTML=[['Problem',p.problem],['Solution',p.solution],['Challenges',p.challenges],['Results',p.results]].filter(([,v])=>v).map(([t,c])=>`<div class="m-sec"><h3>${t}</h3><p>${c}</p></div>`).join('');
-  document.getElementById('m-tech').innerHTML=p.tech.map(t=>`<span>${t}</span>`).join('');
-  document.getElementById('m-acts').innerHTML=`<a href="${p.live}" target="_blank" class="mbp">↗ Live Demo</a><a href="${p.github}" target="_blank" class="mbs">⬡ Source</a>`;
+  document.getElementById('m-stats').innerHTML=[['Stars',p.stars],['Users',p.users],['Uptime',p.uptime]].map(([k,v])=>`<div class="ms"><div class="ms-val">${esc(v)}</div><div class="ms-key">${esc(k)}</div></div>`).join('');
+  document.getElementById('m-secs').innerHTML=[['Problem',p.problem],['Solution',p.solution],['Challenges',p.challenges],['Results',p.results]].filter(([,v])=>v).map(([t,c])=>`<div class="m-sec"><h3>${esc(t)}</h3><p>${esc(c)}</p></div>`).join('');
+  document.getElementById('m-tech').innerHTML=p.tech.map(t=>`<span>${esc(t)}</span>`).join('');
+  document.getElementById('m-acts').innerHTML=`<a href="${esc(p.live)}" target="_blank" class="mbp">↗ Live Demo</a><a href="${esc(p.github)}" target="_blank" class="mbs">⬡ Source</a>`;
   document.getElementById('m-ov').classList.add('open');document.body.style.overflow='hidden';
 }
 function closeModal(e){if(e&&e.target.id!=='m-ov'&&!e.target.classList.contains('m-x'))return;document.getElementById('m-ov').classList.remove('open');document.body.style.overflow='';}
@@ -1359,19 +1373,19 @@ function makeDraggable(cid, arr, renderFn, key) {
 
 function buildSocials() {
   const hs = document.getElementById('hero-soc-wrap');
-  if(hs) hs.innerHTML = SOCIALS.map(s => `<a href="${s.url}" target="_blank" class="soc-btn" aria-label="${s.label}">${s.icon}</a>`).join('');
+  if(hs) hs.innerHTML = SOCIALS.map(s => `<a href="${esc(s.url)}" target="_blank" class="soc-btn" aria-label="${esc(s.label)}">${esc(s.icon)}</a>`).join('');
   const cs = document.getElementById('si-list-wrap');
-  if(cs) cs.innerHTML = SOCIALS.map(s => `<a href="${s.url}" target="_blank" class="si"><div class="si-ico">${s.icon}</div><div><div class="si-lbl">${s.label}</div><div class="si-hdl">${s.url.replace('mailto:','')}</div></div></a>`).join('');
+  if(cs) cs.innerHTML = SOCIALS.map(s => `<a href="${esc(s.url)}" target="_blank" class="si"><div class="si-ico">${esc(s.icon)}</div><div><div class="si-lbl">${esc(s.label)}</div><div class="si-hdl">${esc(s.url.replace('mailto:',''))}</div></div></a>`).join('');
   const fs = document.getElementById('foot-soc-wrap');
-  if(fs) fs.innerHTML = SOCIALS.map(s => `<a href="${s.url}" target="_blank" class="soc-btn">${s.icon}</a>`).join('') + `<button class="soc-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>`;
+  if(fs) fs.innerHTML = SOCIALS.map(s => `<a href="${esc(s.url)}" target="_blank" class="soc-btn">${esc(s.icon)}</a>`).join('') + `<button class="soc-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>`;
 }
 function buildTimeline() {
   const tw = document.getElementById('timeline-w');
   if(!tw) return;
-  tw.innerHTML = TIMELINE.map(t => `<div class="tl-item"><div class="tl-l"><div class="tl-dot"></div><div class="tl-line"></div></div><div class="tl-card"><div class="tl-yr">${t.year}</div><h4>${t.title}</h4><div class="sub">${t.sub}</div><p>${t.desc}</p></div></div>`).join('');
+  tw.innerHTML = TIMELINE.map(t => `<div class="tl-item"><div class="tl-l"><div class="tl-dot"></div><div class="tl-line"></div></div><div class="tl-card"><div class="tl-yr">${esc(t.year)}</div><h4>${esc(t.title)}</h4><div class="sub">${esc(t.sub)}</div><p>${esc(t.desc)}</p></div></div>`).join('');
 }
 function buildASocialList() {
-  document.getElementById('ap-soc-list').innerHTML = SOCIALS.map((s,i) => `<div class="ap-pj"><div class="ap-pj-name">${s.label}</div><div style="font-size:10px;color:var(--mu);overflow:hidden;text-overflow:ellipsis;">${s.url}</div><div class="ap-pj-acts"><button class="apa-d" onclick="delSocial(${i})">✕ Del</button></div></div>`).join('');
+  document.getElementById('ap-soc-list').innerHTML = SOCIALS.map((s,i) => `<div class="ap-pj"><div class="ap-pj-name">${esc(s.label)}</div><div style="font-size:10px;color:var(--mu);overflow:hidden;text-overflow:ellipsis;">${esc(s.url)}</div><div class="ap-pj-acts"><button class="apa-d" onclick="delSocial(${i})">✕ Del</button></div></div>`).join('');
 }
 function addSocial() {
   const l = gi('nso-l'), u = gi('nso-u'), ic = gi('nso-i');
@@ -1381,7 +1395,7 @@ function addSocial() {
 }
 function delSocial(i) { SOCIALS.splice(i, 1); sS('socials', SOCIALS); buildSocials(); buildASocialList(); }
 function buildATimeline() {
-  document.getElementById('ap-tl-list').innerHTML = TIMELINE.map((t,i) => `<div class="ap-pj"><div class="ap-pj-name">${t.title} <span style="color:var(--cy)">${t.year}</span></div><div class="ap-pj-acts"><button class="apa-d" onclick="delTimeline(${i})">✕ Del</button></div></div>`).join('');
+  document.getElementById('ap-tl-list').innerHTML = TIMELINE.map((t,i) => `<div class="ap-pj"><div class="ap-pj-name">${esc(t.title)} <span style="color:var(--cy)">${esc(t.year)}</span></div><div class="ap-pj-acts"><button class="apa-d" onclick="delTimeline(${i})">✕ Del</button></div></div>`).join('');
 }
 function addTimeline() {
   const y = gi('ntl-y'), t = gi('ntl-t'), s = gi('ntl-s'), d = gi('ntl-d');
@@ -1392,7 +1406,7 @@ function addTimeline() {
 function delTimeline(i) { TIMELINE.splice(i, 1); sS('timeline', TIMELINE); buildTimeline(); buildATimeline(); }
 function buildASkills() {
   const cat = gi('sk-cat') || 'frontend'; const list = SKILLS[cat] || [];
-  document.getElementById('ap-sk-list').innerHTML = list.map((s,i) => `<div class="ap-pj"><div class="ap-pj-name">${s.icon} ${s.name} <span style="color:${s.c}">${s.level}%</span></div><div class="ap-pj-acts"><button class="apa-d" onclick="delSkill('${cat}',${i})">✕ Del</button></div></div>`).join('');
+  document.getElementById('ap-sk-list').innerHTML = list.map((s,i) => `<div class="ap-pj"><div class="ap-pj-name">${esc(s.icon)} ${esc(s.name)} <span style="color:${esc(s.c)}">${esc(s.level)}%</span></div><div class="ap-pj-acts"><button class="apa-d" onclick="delSkill('${cat}',${i})">✕ Del</button></div></div>`).join('');
 }
 document.getElementById('sk-cat').addEventListener('change', buildASkills);
 function addSkill() {
@@ -1487,7 +1501,7 @@ function saveEdits(){const ec={};document.querySelectorAll('[data-e][id]').forEa
 /* ─ Projects Admin ─ */
 function buildAProjList(){
   document.getElementById('ap-pj-list').innerHTML=PROJECTS.map((p,i)=>`
-    <div class="ap-pj"><div class="ap-pj-name">${p.title}</div><div style="font-size:10px;color:var(--mu)">${p.tagline}</div>
+    <div class="ap-pj"><div class="ap-pj-name">${esc(p.title)}</div><div style="font-size:10px;color:var(--mu)">${esc(p.tagline)}</div>
     </div>`).join('');
   makeDraggable('ap-pj-list', PROJECTS, buildAProjList, 'projects');
 }
@@ -1517,7 +1531,7 @@ function addProject(){
 
 /* ─ Services & Testimonials Admin ─ */
 function buildAServices() {
-  document.getElementById('ap-srv-list').innerHTML = SERVICES.map((s,i) => `<div class="ap-pj"><div class="ap-pj-name">${s.icon} ${s.title}</div><div style="font-size:10px;color:var(--mu)">${s.desc}</div><div class="ap-pj-acts"><button class="apa-d" onclick="delService(${i})">✕ Del</button></div></div>`).join('');
+  document.getElementById('ap-srv-list').innerHTML = SERVICES.map((s,i) => `<div class="ap-pj"><div class="ap-pj-name">${esc(s.icon)} ${esc(s.title)}</div><div style="font-size:10px;color:var(--mu)">${esc(s.desc)}</div><div class="ap-pj-acts"><button class="apa-d" onclick="delService(${i})">✕ Del</button></div></div>`).join('');
   makeDraggable('ap-srv-list', SERVICES, buildAServices, 'services');
 }
 function addService() {
@@ -1529,7 +1543,7 @@ function addService() {
 function delService(i) { SERVICES.splice(i, 1); sS('services', SERVICES); buildServices(); buildAServices(); }
 
 function buildATestimonials() {
-  document.getElementById('ap-tst-list').innerHTML = TESTIMONIALS.map((t,i) => `<div class="ap-pj"><div class="ap-pj-name">${t.name}</div><div style="font-size:10px;color:var(--mu);margin-bottom:4px">${t.txt.substring(0,40)}...</div><div class="ap-pj-acts"><button class="apa-d" onclick="delTestimonial(${i})">✕ Del</button></div></div>`).join('');
+  document.getElementById('ap-tst-list').innerHTML = TESTIMONIALS.map((t,i) => `<div class="ap-pj"><div class="ap-pj-name">${esc(t.name)}</div><div style="font-size:10px;color:var(--mu);margin-bottom:4px">${esc(t.txt.substring(0,40))}...</div><div class="ap-pj-acts"><button class="apa-d" onclick="delTestimonial(${i})">✕ Del</button></div></div>`).join('');
   makeDraggable('ap-tst-list', TESTIMONIALS, buildATestimonials, 'testimonials');
 }
 function addTestimonial() {
