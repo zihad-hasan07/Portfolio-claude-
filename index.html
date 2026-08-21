@@ -941,7 +941,7 @@ body.em [data-e]:focus{outline:2px solid var(--cy);background:rgba(0,119,182,.08
 /* ══════════════════════════════════════════════════════════
    DEFAULT DATA — user fills everything via admin
 ══════════════════════════════════════════════════════════ */
-let PASS = 'admin2026';
+let PASS_HASH = '6051fc84a7a0d74c225fb18a496b09952da5642e60723ecae543298edd7d82d6';
 let SEC_Q = 'What was your first pet\'s name?';
 let SEC_A = 'fluffy';
 
@@ -1256,12 +1256,22 @@ function showRecovery(){
 function showLocked(){document.getElementById('login-form').style.display='none';document.getElementById('recovery-form').style.display='none';document.getElementById('locked-view').style.display='block';}
 function updateAttDisplay(){const rem=MAX_ATT-attempts;document.getElementById('adm-attempts-display').textContent=attempts>0?`${rem} attempt${rem===1?'':'s'} left`:'';}
 
-function tryLogin(){
+async function tryLogin(){
   if(locked){showLocked();return;}
   const p=document.getElementById('adm-pass').value;
-  const stored=lS('adminPass')||PASS;
+
+  let stored=lS('adminPass');
+  if(!stored) {
+    stored=PASS_HASH;
+  } else if(stored.length !== 64) {
+    // migrate legacy plaintext password
+    stored = await hashPass(stored);
+    sS('adminPass', stored);
+  }
+
+  const pHash = await hashPass(p);
   document.getElementById('adm-pass').value='';
-  if(p===stored){
+  if(pHash===stored){
     attempts=0;localStorage.setItem('adm','1');
     closeAdmOv();openAdmin();
   } else {
@@ -1292,10 +1302,11 @@ function tryRecovery(){
     document.getElementById('rec-err').style.display='block';
   }
 }
-function resetPassword(){
+async function resetPassword(){
   const np=document.getElementById('rec-newpass').value;
   if(np.length<6){alert('Password must be at least 6 characters.');return;}
-  sS('adminPass',np);PASS=np;
+  const npHash = await hashPass(np);
+  sS('adminPass',npHash);
   closeAdmOv();openAdmin();
   alert('Password reset. Welcome back!');
 }
@@ -1544,16 +1555,27 @@ function checkStrength(p){
   const colors=['#ff4d4d','#ff8c00','#ffd700','#009955'];
   bar.style.width=(s/4*100)+'%';bar.style.background=colors[s-1]||'var(--bd)';
 }
-function saveSecuritySettings(){
+async function saveSecuritySettings(){
   const old=gi('sec-old'),nw=gi('sec-new'),cnf=gi('sec-cnf');
   const q=gi('sec-q'),a=gi('sec-a');
   const msg=document.getElementById('sec-msg');
-  const stored=lS('adminPass')||PASS;
+
+  let stored=lS('adminPass');
+  if(!stored) {
+    stored=PASS_HASH;
+  } else if(stored.length !== 64) {
+    // migrate legacy plaintext password
+    stored = await hashPass(stored);
+    sS('adminPass', stored);
+  }
+
   if(nw||old){
-    if(old!==stored){showMsg('Current password incorrect','#ff4d4d',true);return;}
+    const oldHash = await hashPass(old);
+    if(oldHash!==stored){showMsg('Current password incorrect','#ff4d4d',true);return;}
     if(nw!==cnf){showMsg('Passwords do not match','#ff4d4d',true);return;}
     if(nw.length<6){showMsg('Min 6 characters','#ff4d4d',true);return;}
-    sS('adminPass',nw);PASS=nw;
+    const nwHash = await hashPass(nw);
+    sS('adminPass',nwHash);
   }
   if(q)sS('secQ',q);
   if(a)sS('secA',a.toLowerCase());
@@ -1584,6 +1606,10 @@ function importData(e){
 }
 
 /* ─ Helpers ─ */
+async function hashPass(str) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
 function gi(id){const el=document.getElementById(id);return el?(el.value||el.textContent||'').trim():'';}
 function gv(id,v){const el=document.getElementById(id);if(el&&v!==undefined)el.value=v;}
 function st(id,txt){const el=document.getElementById(id);if(el)el.textContent=txt;}
