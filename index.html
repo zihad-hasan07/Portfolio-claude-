@@ -942,8 +942,8 @@ body.em [data-e]:focus{outline:2px solid var(--cy);background:rgba(0,119,182,.08
    DEFAULT DATA — user fills everything via admin
 ══════════════════════════════════════════════════════════ */
 let PASS = 'admin2026';
-let SEC_Q = 'What was your first pet\'s name?';
-let SEC_A = 'fluffy';
+let SEC_Q = '';
+let SEC_A = '';
 
 let EXTRA_TAGS=[];
 let ROLES = ['Full-Stack Developer','Software Engineer','Open Source Builder','Problem Solver','Creative Technologist'];
@@ -1283,12 +1283,20 @@ function lockout(){
 function tryRecovery(){
   const ans=document.getElementById('rec-ans').value.trim().toLowerCase();
   const stored=(lS('secA')||SEC_A).toLowerCase();
+
+  if (!stored) {
+    document.getElementById('rec-err').textContent = 'No security question set. Recovery unavailable.';
+    document.getElementById('rec-err').style.display = 'block';
+    return;
+  }
+
   if(ans===stored){
     document.getElementById('rec-err').style.display='none';
     document.getElementById('rec-reset').style.display='block';
     document.getElementById('rec-ans').disabled=true;
     locked=false;if(lockTimer)clearInterval(lockTimer);attempts=0;
   } else {
+    document.getElementById('rec-err').textContent = 'Incorrect answer.';
     document.getElementById('rec-err').style.display='block';
   }
 }
