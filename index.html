@@ -938,17 +938,18 @@ body.em [data-e]:focus{outline:2px solid var(--cy);background:rgba(0,119,182,.08
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
 <script>
 /* ══════════════════════════════════════════════════════════
    SUPABASE CLIENT + STORAGE LAYER
    The anon (publishable) key is safe to expose in the browser
    because Row Level Security gates all access server-side.
    The service_role key is NEVER used here.
-   Netlify env vars (SUPABASE_URL, SUPABASE_ANON_KEY), if present,
-   override these defaults at build time via the bootstrap function.
-   NOTE: If you change these values, also update netlify.toml env injection.
+   SUPABASE_URL is injected at build time into config.js (see
+   scripts/generate-config.js) from the SUPABASE_URL Netlify env var,
+   so the project URL is never hardcoded/committed here.
 ════════════════════════════════════════════════════════ */
-const SUPABASE_URL  = (window.SUPABASE_URL  || "https://trzfidxecdbwynnzgdnm.supabase.co");
+const SUPABASE_URL  = window.SUPABASE_URL || "";
 const SUPABASE_ANON = (window.SUPABASE_ANON || "sb_publishable_cxR0CHwn4jAkWGRfIKVt7g_H4dx1MXz");
 const CONTENT_TABLE = "portfolio_content";
 const IMAGE_BUCKET  = "portfolio-images";
