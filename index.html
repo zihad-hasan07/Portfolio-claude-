@@ -1469,7 +1469,7 @@ function setPhoto(src){
 
 /* ─ Edit Mode ─ */
 let emOn=false;
-function toggleEM(){emOn=!emOn;document.body.classList.toggle('em',emOn);document.getElementById('em-bar').classList.toggle('show',emOn);document.getElementById('em-toggle-btn').textContent=emOn?'✓ Disable Edit Mode':'Enable Edit Mode';document.querySelectorAll('[data-e]').forEach(el=>{el.contentEditable=emOn?'true':'false';});if(emOn)document.querySelectorAll('[data-e]').forEach(el=>el.addEventListener('blur',saveEdits));}
+function toggleEM(){emOn=!emOn;document.body.classList.toggle('em',emOn);document.getElementById('em-bar').classList.toggle('show',emOn);document.getElementById('em-toggle-btn').textContent=emOn?'✓ Disable Edit Mode':'Enable Edit Mode';document.querySelectorAll('[data-e]').forEach(el=>{el.contentEditable=emOn?'true':'false';if(emOn)el.addEventListener('blur',saveEdits);});}
 function disableEM(){emOn=false;document.body.classList.remove('em');document.getElementById('em-bar').classList.remove('show');document.getElementById('em-toggle-btn').textContent='Enable Edit Mode';document.querySelectorAll('[data-e]').forEach(el=>{el.contentEditable='false';});}
 function saveEdits(){const ec={};document.querySelectorAll('[data-e][id]').forEach(el=>ec[el.id]=el.textContent);sS('edits',ec);}
 
